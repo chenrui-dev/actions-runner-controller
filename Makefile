@@ -1,4 +1,4 @@
-NAME ?= summerwind/actions-runner-controller
+NAME ?= chenrui/actions-runner-controller
 VERSION ?= latest
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
@@ -55,7 +55,7 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build . -t ${NAME}:${VERSION}
 
 # Push the docker image

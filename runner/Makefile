@@ -1,4 +1,4 @@
-NAME ?= summerwind/actions-runner
+NAME ?= chenrui/actions-runner
 
 RUNNER_VERSION ?= 2.168.0
 DOCKER_VERSION ?= 19.03.8

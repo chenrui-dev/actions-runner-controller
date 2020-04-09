@@ -16,7 +16,7 @@ jobs:
       run: make docker-build
       working-directory: runner
     - name: Docker Login
-      run: docker login -u summerwind -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
+      run: docker login -u chenrui -p ${{ secrets.DOCKER_ACCESS_TOKEN }}
     - name: Push container image
       run: make docker-push
       working-directory: runner

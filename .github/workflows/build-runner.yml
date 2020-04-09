@@ -1,9 +1,12 @@
+name: build-runner
+
 on:
   push:
     branches:
     - master
     paths:
     - 'runner/**'
+    - '.github/workflows/build-runner.yml'
 
 jobs:
   build:

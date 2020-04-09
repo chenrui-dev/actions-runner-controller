@@ -26,6 +26,7 @@ RUN mkdir -p /runner \
 
 COPY scripts/* /runner/
 RUN sh /runner/basic.sh
+RUN sh /runner/git.sh
 RUN sh /runner/nodejs.sh
 RUN sh /runner/python.sh
 RUN sh /runner/java-tools.sh

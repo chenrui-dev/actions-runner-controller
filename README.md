@@ -13,7 +13,7 @@ This controller operates self-hosted runners for GitHub Actions on your Kubernet
 First, install *actions-runner-controller* with a manifest file. This will create a *actions-runner-system* namespace in your Kubernetes and deploy the required resources.
 
 ```
-$ kubectl apply -f https://github.com/summerwind/actions-runner-controller/releases/latest/download/actions-runner-controller.yaml
+$ kubectl apply -f https://github.com/chenrui333/actions-runner-controller/releases/latest/download/actions-runner-controller.yaml
 ```
 
 Next, from an account that has `admin` privileges for the repository, create a [personal access token](https://github.com/settings/tokens) with `repo` scope. This token is used to register a self-hosted runner by *actions-runner-controller*.
@@ -33,7 +33,7 @@ There's generally two ways to use this controller:
 
 ### Runners
 
-To launch a single Self-hosted runner, you need to create a manifest file includes *Runner* resource as follows. This example launches a self-hosted runner with name *example-runner* for the *summerwind/actions-runner-controller* repository.
+To launch a single Self-hosted runner, you need to create a manifest file includes *Runner* resource as follows. This example launches a self-hosted runner with name *example-runner* for the *chenrui333/actions-runner-controller* repository.
 
 ```
 # runner.yaml
@@ -42,7 +42,7 @@ kind: Runner
 metadata:
   name: example-runner
 spec:
-  repository: summerwind/actions-runner-controller
+  repository: chenrui333/actions-runner-controller
   env: []
 ```
 
@@ -91,7 +91,7 @@ spec:
   replicas: 2
   template:
     spec:
-      repository: mumoshu/actions-runner-controller-ci
+      repository: chenrui333/actions-runner-controller
       env: []
 ```
 

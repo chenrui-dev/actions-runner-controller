@@ -7,8 +7,8 @@
 # Install bazel
 curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
 echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
-apt-get update -y
-apt-get install -y bazel
+apt-get update -y > /dev/null
+apt-get install -yqq bazel > /dev/null
 
 # Install bazelisk
 npm install -g @bazel/bazelisk

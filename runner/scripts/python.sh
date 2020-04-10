@@ -5,7 +5,7 @@
 ################################################################################
 
 # Install Python, Python 3, pip, pip3
-apt-get install -y --no-install-recommends python python-dev python-pip python3 python3-dev python3-pip
+apt-get install -yqq --no-install-recommends python python-dev python-pip python3 python3-dev python3-pip > /dev/null
 
 # Run tests to determine that the software installed as expected
 echo "Testing to make sure that script performed as expected, and basic scenarios work"

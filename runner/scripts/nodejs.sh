@@ -18,7 +18,7 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.lis
 apt-get update
 
 # Install yarn
-apt-get install -y --no-install-recommends yarn
+apt-get install -yqq --no-install-recommends yarn > /dev/null
 
 # Run tests to determine that the software installed as expected
 echo "Testing to make sure that script performed as expected, and basic scenarios work"

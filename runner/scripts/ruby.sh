@@ -4,8 +4,8 @@
 ##  Desc:  Installs Ruby requirements
 ################################################################################
 
-apt-get install -y ruby-full
+apt-get install -yqq ruby-full > /dev/null
 sudo gem update --system
 
 # Install Ruby requirements
-apt-get install -y libz-dev openssl libssl-dev
+apt-get install -yqq libz-dev openssl libssl-dev > /dev/null

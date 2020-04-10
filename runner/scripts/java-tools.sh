@@ -8,11 +8,6 @@ DEFAULT_JDK_VERSION=8
 
 set -e
 
-apt-get -y install gnupg gnupg2 gnupg1
-
-# /runner/java-tools.sh: apt-add-repository: not found
-apt-get -y install software-properties-common
-
 # /runner/java-tools.sh: apt-fast: not found
 # add-apt-repository ppa:apt-fast/stable
 # apt-get update

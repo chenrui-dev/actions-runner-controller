@@ -123,6 +123,9 @@ apt-get install -y --no-install-recommends curl
 echo "Install parallel"
 apt-get install -y --no-install-recommends parallel
 
+apt-get -y install gnupg gnupg2 gnupg1
+apt-get -y install software-properties-common
+
 # Run tests to determine that the software installed as expected
 echo "Testing to make sure that script performed as expected, and basic scenarios work"
 for cmd in curl file ftp jq netcat ssh parallel rsync shellcheck sudo telnet time unzip wget zip; do

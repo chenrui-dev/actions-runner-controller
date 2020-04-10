@@ -33,6 +33,7 @@ RUN sh /runner/python.sh
 RUN sh /runner/java-tools.sh
 RUN sh /runner/bazel.sh
 RUN sh /runner/aws.sh
+RUN sh /runner/android.sh
 RUN sh /runner/terraform.sh
 
 COPY entrypoint.sh /runner

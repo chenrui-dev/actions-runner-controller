@@ -49,4 +49,4 @@ echo "y" | ${ANDROID_SDK_ROOT}/tools/bin/sdkmanager \
     "add-ons;addon-google_apis-google-24" \
     "add-ons;addon-google_apis-google-23" \
     "add-ons;addon-google_apis-google-22" \
-    "add-ons;addon-google_apis-google-21"
+    "add-ons;addon-google_apis-google-21" 1>/dev/null

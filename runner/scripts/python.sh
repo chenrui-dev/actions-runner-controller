@@ -4,8 +4,10 @@
 ##  Desc:  Installs Python 2/3
 ################################################################################
 
-# Install Python, Python 3, pip, pip3
-apt-get install -yqq --no-install-recommends python python-dev python-pip python3 python3-dev python3-pip > /dev/null
+# Install Python, Python 3, pip, pip3, python(3) setuptools
+apt-get install -yqq \
+    python python-dev python-pip python-setuptools python-pydot python-pydot-ng graphviz \
+    python3 python3-dev python3-pip python3-setuptools > /dev/null
 
 # Run tests to determine that the software installed as expected
 echo "Testing to make sure that script performed as expected, and basic scenarios work"

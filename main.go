@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	defaultRunnerImage = "chenrui/actions-runner:v2.168.0"
-	defaultDockerImage = "docker:19.03.6-dind"
+	defaultRunnerImage = "chenrui/actions-runner:v2.169.1"
+	defaultDockerImage = "docker:19.03.8-dind"
 )
 
 var (

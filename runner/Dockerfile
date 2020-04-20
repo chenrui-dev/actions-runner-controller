@@ -36,6 +36,11 @@ RUN sh /runner/aws.sh
 RUN sh /runner/android.sh
 RUN sh /runner/terraform.sh
 
+# android env variables
+ENV ANDROID_HOME "/usr/local/lib/android/sdk"
+ENV ANDROID_SDK_ROOT "/usr/local/lib/android/sdk"
+ENV M2_REPO "/usr/local/lib/m2"
+
 COPY entrypoint.sh /runner
 
 USER runner:runner

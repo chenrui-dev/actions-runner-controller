@@ -30,6 +30,9 @@ ENV ANDROID_HOME "/usr/local/lib/android/sdk"
 ENV ANDROID_SDK_ROOT "/usr/local/lib/android/sdk"
 ENV M2_REPO "/usr/local/lib/m2"
 
+ENV DEBCONF_NOWARNINGS yes
+ENV REPO_OS_OVERRIDE "linux"
+
 COPY scripts/* /runner/
 RUN sh /runner/basic.sh
 RUN sh /runner/git.sh

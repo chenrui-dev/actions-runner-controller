@@ -24,6 +24,12 @@ RUN mkdir -p /runner \
   && rm runner.tar.gz \
   && ./bin/installdependencies.sh
 
+# android env variables
+# ANDROID_HOME is essential for the new sdkmanager (see, https://stackoverflow.com/questions/60440509/android-command-line-tools-sdkmanager-always-shows-warning-could-not-create-se)
+ENV ANDROID_HOME "/usr/local/lib/android/sdk"
+ENV ANDROID_SDK_ROOT "/usr/local/lib/android/sdk"
+ENV M2_REPO "/usr/local/lib/m2"
+
 COPY scripts/* /runner/
 RUN sh /runner/basic.sh
 RUN sh /runner/git.sh
@@ -35,11 +41,6 @@ RUN sh /runner/bazel.sh
 RUN sh /runner/aws.sh
 RUN sh /runner/android.sh
 RUN sh /runner/terraform.sh
-
-# android env variables
-ENV ANDROID_HOME "/usr/local/lib/android/sdk"
-ENV ANDROID_SDK_ROOT "/usr/local/lib/android/sdk"
-ENV M2_REPO "/usr/local/lib/m2"
 
 COPY entrypoint.sh /runner
 

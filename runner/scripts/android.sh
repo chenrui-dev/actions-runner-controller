@@ -34,7 +34,7 @@ else
 fi
 
 # Install the following SDKs and build tools, passing in "y" to accept licenses.
-echo "y" | ${ANDROID_SDK_ROOT}/tools/bin/sdkmanager \
+echo "y" | ${ANDROID_SDK_ROOT}/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} \
     "platform-tools" \
     "platforms;android-29" \
     "platforms;android-28" \

@@ -24,6 +24,8 @@ unzip android-sdk.zip -d ${ANDROID_SDK_ROOT}
 rm -f android-sdk.zip
 
 # Check sdk manager installation
+mkdir ${ANDROID_HOME}/.android && touch ${ANDROID_HOME}/.android/repositories.cfg
+yes | /usr/local/lib/android/sdk/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --licenses >/dev/null
 /usr/local/lib/android/sdk/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --list 1>/dev/null
 if [ $? -eq 0 ]
 then

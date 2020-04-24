@@ -19,14 +19,14 @@ mkdir -p ${ANDROID_SDK_ROOT}
 
 # Download the latest command line tools so that we can accept all of the licenses.
 # See https://developer.android.com/studio/#command-tools
-wget -O android-sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-6200805_latest.zip
+wget -O android-sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-${VERSION_SDK_TOOLS}.zip
 unzip android-sdk.zip -d ${ANDROID_SDK_ROOT}
 rm -f android-sdk.zip
 
 # Check sdk manager installation
 mkdir ${ANDROID_HOME}/.android && touch ${ANDROID_HOME}/.android/repositories.cfg
-yes | /usr/local/lib/android/sdk/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --licenses >/dev/null
-/usr/local/lib/android/sdk/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --list 1>/dev/null
+yes | ${ANDROID_SDK_ROOT}/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --licenses >/dev/null
+${ANDROID_SDK_ROOT}/tools/bin/sdkmanager --sdk_root=${ANDROID_HOME} --list 1>/dev/null
 if [ $? -eq 0 ]
 then
     echo "Android SDK manager was installed"

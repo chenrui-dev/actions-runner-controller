@@ -32,6 +32,7 @@ ENV M2_REPO "/usr/local/lib/m2"
 
 ENV DEBCONF_NOWARNINGS yes
 ENV REPO_OS_OVERRIDE "linux"
+ENV VERSION_SDK_TOOLS "6200805_latest"
 
 COPY scripts/* /runner/
 RUN sh /runner/basic.sh

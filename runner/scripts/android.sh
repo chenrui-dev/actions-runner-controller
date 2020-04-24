@@ -39,6 +39,7 @@ echo "y" | ${ANDROID_SDK_ROOT}/tools/bin/sdkmanager \
     "platforms;android-29" \
     "platforms;android-28" \
     "platforms;android-21" \
+    "build-tools;30.0.0-rc2" \
     "build-tools;29.0.3" \
     "build-tools;29.0.2" \
     "build-tools;29.0.0" \

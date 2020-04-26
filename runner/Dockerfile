@@ -4,9 +4,9 @@ ARG RUNNER_VERSION
 ARG DOCKER_VERSION
 
 # fix "debconf: delaying package configuration, since apt-utils is not installed"
-RUN apt update \
-  && apt install sudo curl ca-certificates -y --no-install-recommends \
-  && apt install -y --no-install-recommends apt-utils \
+RUN apt-get update \
+  && apt-get install sudo curl ca-certificates -y --no-install-recommends \
+  && apt-get install -y --no-install-recommends apt-utils \
   && curl -L -o docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz \
   && tar zxvf docker.tgz \
   && install -o root -g root -m 755 docker/docker /usr/local/bin/docker \

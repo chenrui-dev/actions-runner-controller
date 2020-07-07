@@ -17,15 +17,24 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // RunnerSpec defines the desired state of Runner
 type RunnerSpec struct {
-	// +kubebuilder:validation:MinLength=3
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[^/]+$`
+	Organization string `json:"organization,omitempty"`
+
+	// +optional
 	// +kubebuilder:validation:Pattern=`^[^/]+/[^/]+$`
-	Repository string `json:"repository"`
+	Repository string `json:"repository,omitempty"`
+
+	// +optional
+	Labels []string `json:"labels,omitempty"`
 
 	// +optional
 	Containers []corev1.Container `json:"containers,omitempty"`
@@ -68,6 +77,19 @@ type RunnerSpec struct {
 	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
 }
 
+// ValidateRepository validates repository field.
+func (rs *RunnerSpec) ValidateRepository() error {
+	// Organization and repository are both exclusive.
+	if len(rs.Organization) == 0 && len(rs.Repository) == 0 {
+		return errors.New("Spec needs organization or repository")
+	}
+	if len(rs.Organization) > 0 && len(rs.Repository) > 0 {
+		return errors.New("Spec cannot have both organization and repository")
+	}
+
+	return nil
+}
+
 // RunnerStatus defines the observed state of Runner
 type RunnerStatus struct {
 	Registration RunnerStatusRegistration `json:"registration"`
@@ -76,15 +98,20 @@ type RunnerStatus struct {
 	Message      string                   `json:"message"`
 }
 
+// RunnerStatusRegistration contains runner registration status
 type RunnerStatusRegistration struct {
-	Repository string      `json:"repository"`
-	Token      string      `json:"token"`
-	ExpiresAt  metav1.Time `json:"expiresAt"`
+	Organization string      `json:"organization,omitempty"`
+	Repository   string      `json:"repository,omitempty"`
+	Labels       []string    `json:"labels,omitempty"`
+	Token        string      `json:"token"`
+	ExpiresAt    metav1.Time `json:"expiresAt"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:JSONPath=".spec.organization",name=Organization,type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.repository",name=Repository,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.labels",name=Labels,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.phase",name=Status,type=string
 
 // Runner is the Schema for the runners API

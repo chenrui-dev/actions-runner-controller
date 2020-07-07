@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	actionsv1alpha1 "github.com/summerwind/actions-runner-controller/api/v1alpha1"
 	"github.com/summerwind/actions-runner-controller/controllers"
@@ -34,7 +35,7 @@ import (
 )
 
 const (
-	defaultRunnerImage = "chenrui/actions-runner:v2.169.1"
+	defaultRunnerImage = "chenrui/actions-runner:v2.267.0"
 	defaultDockerImage = "docker:19.03.8-dind"
 )
 
@@ -57,6 +58,7 @@ func main() {
 
 		metricsAddr          string
 		enableLeaderElection bool
+		syncPeriod           time.Duration
 
 		runnerImage string
 		dockerImage string
@@ -76,6 +78,7 @@ func main() {
 	flag.Int64Var(&ghAppID, "github-app-id", 0, "The application ID of GitHub App.")
 	flag.Int64Var(&ghAppInstallationID, "github-app-installation-id", 0, "The installation ID of GitHub App.")
 	flag.StringVar(&ghAppPrivateKey, "github-app-private-key", "", "The path of a private key file to authenticate as a GitHub App")
+	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute, "Determines the minimum frequency at which K8s resources managed by this controller are reconciled. When you use autoscaling, set to a lower value like 10 minute, because this corresponds to the minimum time to react on demand change")
 	flag.Parse()
 
 	if ghToken == "" {
@@ -133,6 +136,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
+		SyncPeriod:         &syncPeriod,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -165,13 +169,27 @@ func main() {
 	}
 
 	runnerDeploymentReconciler := &controllers.RunnerDeploymentReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("RunnerDeployment"),
-		Scheme: mgr.GetScheme(),
+		Client:       mgr.GetClient(),
+		Log:          ctrl.Log.WithName("controllers").WithName("RunnerDeployment"),
+		Scheme:       mgr.GetScheme(),
+		GitHubClient: ghClient,
 	}
 
 	if err = runnerDeploymentReconciler.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RunnerDeployment")
+		os.Exit(1)
+	}
+
+	if err = (&actionsv1alpha1.Runner{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Runner")
+		os.Exit(1)
+	}
+	if err = (&actionsv1alpha1.RunnerDeployment{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "RunnerDeployment")
+		os.Exit(1)
+	}
+	if err = (&actionsv1alpha1.RunnerReplicaSet{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "RunnerReplicaSet")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

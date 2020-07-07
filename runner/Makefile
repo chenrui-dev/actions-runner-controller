@@ -1,6 +1,6 @@
 NAME ?= chenrui/actions-runner
 
-RUNNER_VERSION ?= 2.169.1
+RUNNER_VERSION ?= 2.267.0
 DOCKER_VERSION ?= 19.03.8
 
 docker-build:

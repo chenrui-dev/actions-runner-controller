@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +66,12 @@ func (r *RunnerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	err := runner.Validate()
+	if err != nil {
+		log.Info("Failed to validate runner spec", "error", err.Error())
+		return ctrl.Result{}, nil
+	}
+
 	if runner.ObjectMeta.DeletionTimestamp.IsZero() {
 		finalizers, added := addFinalizer(runner.ObjectMeta.Finalizers)
 
@@ -83,14 +90,18 @@ func (r *RunnerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		finalizers, removed := removeFinalizer(runner.ObjectMeta.Finalizers)
 
 		if removed {
-			ok, err := r.unregisterRunner(ctx, runner.Spec.Repository, runner.Name)
-			if err != nil {
-				log.Error(err, "Failed to unregister runner")
-				return ctrl.Result{}, err
-			}
+			if len(runner.Status.Registration.Token) > 0 {
+				ok, err := r.unregisterRunner(ctx, runner.Spec.Organization, runner.Spec.Repository, runner.Name)
+				if err != nil {
+					log.Error(err, "Failed to unregister runner")
+					return ctrl.Result{}, err
+				}
 
-			if !ok {
-				log.V(1).Info("Runner no longer exists on GitHub")
+				if !ok {
+					log.V(1).Info("Runner no longer exists on GitHub")
+				}
+			} else {
+				log.V(1).Info("Runner was never registered on GitHub")
 			}
 
 			newRunner := runner.DeepCopy()
@@ -101,14 +112,14 @@ func (r *RunnerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 
-			log.Info("Removed runner from GitHub", "repository", runner.Spec.Repository)
+			log.Info("Removed runner from GitHub", "repository", runner.Spec.Repository, "organization", runner.Spec.Organization)
 		}
 
 		return ctrl.Result{}, nil
 	}
 
 	if !runner.IsRegisterable() {
-		rt, err := r.GitHubClient.GetRegistrationToken(ctx, runner.Spec.Repository, runner.Name)
+		rt, err := r.GitHubClient.GetRegistrationToken(ctx, runner.Spec.Organization, runner.Spec.Repository, runner.Name)
 		if err != nil {
 			r.Recorder.Event(&runner, corev1.EventTypeWarning, "FailedUpdateRegistrationToken", "Updating registration token failed")
 			log.Error(err, "Failed to get new registration token")
@@ -117,9 +128,11 @@ func (r *RunnerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 		updated := runner.DeepCopy()
 		updated.Status.Registration = v1alpha1.RunnerStatusRegistration{
-			Repository: runner.Spec.Repository,
-			Token:      rt.GetToken(),
-			ExpiresAt:  metav1.NewTime(rt.GetExpiresAt().Time),
+			Organization: runner.Spec.Organization,
+			Repository:   runner.Spec.Repository,
+			Labels:       runner.Spec.Labels,
+			Token:        rt.GetToken(),
+			ExpiresAt:    metav1.NewTime(rt.GetExpiresAt().Time),
 		}
 
 		if err := r.Status().Update(ctx, updated); err != nil {
@@ -212,8 +225,8 @@ func (r *RunnerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, nil
 }
 
-func (r *RunnerReconciler) unregisterRunner(ctx context.Context, repo, name string) (bool, error) {
-	runners, err := r.GitHubClient.ListRunners(ctx, repo)
+func (r *RunnerReconciler) unregisterRunner(ctx context.Context, org, repo, name string) (bool, error) {
+	runners, err := r.GitHubClient.ListRunners(ctx, org, repo)
 	if err != nil {
 		return false, err
 	}
@@ -230,7 +243,7 @@ func (r *RunnerReconciler) unregisterRunner(ctx context.Context, repo, name stri
 		return false, nil
 	}
 
-	if err := r.GitHubClient.RemoveRunner(ctx, repo, id); err != nil {
+	if err := r.GitHubClient.RemoveRunner(ctx, org, repo, id); err != nil {
 		return false, err
 	}
 
@@ -254,8 +267,16 @@ func (r *RunnerReconciler) newPod(runner v1alpha1.Runner) (corev1.Pod, error) {
 			Value: runner.Name,
 		},
 		{
+			Name:  "RUNNER_ORG",
+			Value: runner.Spec.Organization,
+		},
+		{
 			Name:  "RUNNER_REPO",
 			Value: runner.Spec.Repository,
+		},
+		{
+			Name:  "RUNNER_LABELS",
+			Value: strings.Join(runner.Spec.Labels, ","),
 		},
 		{
 			Name:  "RUNNER_TOKEN",
@@ -282,6 +303,10 @@ func (r *RunnerReconciler) newPod(runner v1alpha1.Runner) (corev1.Pod, error) {
 					EnvFrom:         runner.Spec.EnvFrom,
 					VolumeMounts: []corev1.VolumeMount{
 						{
+							Name:      "work",
+							MountPath: "/runner/_work",
+						},
+						{
 							Name:      "docker",
 							MountPath: "/var/run",
 						},
@@ -296,6 +321,10 @@ func (r *RunnerReconciler) newPod(runner v1alpha1.Runner) (corev1.Pod, error) {
 					Image: r.DockerImage,
 					VolumeMounts: []corev1.VolumeMount{
 						{
+							Name:      "work",
+							MountPath: "/runner/_work",
+						},
+						{
 							Name:      "docker",
 							MountPath: "/var/run",
 						},
@@ -306,7 +335,13 @@ func (r *RunnerReconciler) newPod(runner v1alpha1.Runner) (corev1.Pod, error) {
 				},
 			},
 			Volumes: []corev1.Volume{
-				corev1.Volume{
+				{
+					Name: "work",
+					VolumeSource: corev1.VolumeSource{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+				{
 					Name: "docker",
 					VolumeSource: corev1.VolumeSource{
 						EmptyDir: &corev1.EmptyDirVolumeSource{},
@@ -325,7 +360,7 @@ func (r *RunnerReconciler) newPod(runner v1alpha1.Runner) (corev1.Pod, error) {
 	}
 
 	if len(runner.Spec.Volumes) != 0 {
-		pod.Spec.Volumes = append(runner.Spec.Volumes, runner.Spec.Volumes...)
+		pod.Spec.Volumes = append(pod.Spec.Volumes, runner.Spec.Volumes...)
 	}
 	if len(runner.Spec.InitContainers) != 0 {
 		pod.Spec.InitContainers = append(pod.Spec.InitContainers, runner.Spec.InitContainers...)

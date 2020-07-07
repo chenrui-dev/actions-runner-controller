@@ -4,19 +4,30 @@ This controller operates self-hosted runners for GitHub Actions on your Kubernet
 
 ## Motivation
 
-[GitHub Actions](https://github.com/features/actions) is very useful as a tool for automating development. GitHub Actions job is run in the cloud by default, but you may want to run your jobs in your environment. [Self-hosted runner](https://github.com/actions/runner) can be used for such use cases, but requires the provision of a virtual machine instance and configuration. If you already have a Kubernetes cluster, you'll want to run the self-hosted runner on top of it.
+[GitHub Actions](https://github.com/features/actions) is a very useful tool for automating development. GitHub Actions jobs are run in the cloud by default, but you may want to run your jobs in your environment. [Self-hosted runner](https://github.com/actions/runner) can be used for such use cases, but requires the provisioning and configuration of a virtual machine instance. Instead if you already have a Kubernetes cluster, it makes more sense to run the self-hosted runner on top of it.
 
-*actions-runner-controller* makes that possible. Just create a *Runner* resource on your Kubernetes, and it will run and operate the self-hosted runner of the specified repository. Combined with Kubernetes RBAC, you can also build simple Self-hosted runners as a Service.
+**actions-runner-controller** makes that possible. Just create a *Runner* resource on your Kubernetes, and it will run and operate the self-hosted runner for the specified repository. Combined with Kubernetes RBAC, you can also build simple Self-hosted runners as a Service.
 
 ## Installation
 
-First, install *actions-runner-controller* with a manifest file. This will create a *actions-runner-system* namespace in your Kubernetes and deploy the required resources.
+actions-runner-controller uses [cert-manager](https://cert-manager.io/docs/installation/kubernetes/) for certificate management of Admission Webhook. Make sure you have already installed cert-manager before you install. The installation instructions for cert-manager can be found below.
+
+- [Installing cert-manager on Kubernetes](https://cert-manager.io/docs/installation/kubernetes/)
+
+Install the custom resource and actions-runner-controller itself. This will create actions-runner-system namespace in your Kubernetes and deploy the required resources.
 
 ```
 $ kubectl apply -f https://github.com/chenrui333/actions-runner-controller/releases/latest/download/actions-runner-controller.yaml
 ```
 
-Next, set up a GitHub App or personal access token for *actions-runner-controller* to access the GitHub API.
+## Setting up authentication with GitHub API
+
+There are two ways for actions-runner-controller to authenticate with the the GitHub API:
+
+1. Using GitHub App.
+2. Using Personal Access Token.
+
+**NOTE: It is extremely important to only follow one of the sections below and not both.**
 
 ### Using GitHub App
 
@@ -26,7 +37,7 @@ You can create a GitHub App for either your account or any organization. If you 
 
 If you want to create a GitHub App for your organization, replace the `:org` part of the following URL with your organization name before opening it. Then enter any unique name in the "GitHub App name" field, and hit the "Create GitHub App" button at the bottom of the page to create a GitHub App.
 
-- [Create GitHub Apps on your organization](https://github.com/organizations/:org/settings/apps/new?url=http://github.com/summerwind/actions-runner-controller&webhook_active=false&public=false&administration=write)
+- [Create GitHub Apps on your organization](https://github.com/organizations/:org/settings/apps/new?url=http://github.com/summerwind/actions-runner-controller&webhook_active=false&public=false&administration=write&organization_self_hosted_runners=write)
 
 You will see an *App ID* on the page of the GitHub App you created as follows, the value of this App ID will be used later.
 
@@ -55,13 +66,15 @@ $ kubectl create secret generic controller-manager \
     --from-file=github_app_private_key=${PRIVATE_KEY_FILE_PATH}
 ```
 
-### Using personal access token
+### Using Personal Access Token
 
-Next, from an account that has `admin` privileges for the repository, create a [personal access token](https://github.com/settings/tokens) with `repo` scope. This token is used to register a self-hosted runner by *actions-runner-controller*.
+From an account that has `admin` privileges for the repository, create a [personal access token](https://github.com/settings/tokens) with `repo` scope. This token is used to register a self-hosted runner by *actions-runner-controller*.
 
-To use a Personal Access Token, you must issue the token with an account that has `admin` privileges.
+Self-hosted runners in GitHub can either be connected to a single repository, or to a GitHub organization (so they are available to all repositories in the organization). This token is used to register a self-hosted runner by *actions-runner-controller*.
 
-Open the Create Token page from the following link, grant the `repo` scope, and press the "Generate Token" button at the bottom of the page to create the token.
+For adding a runner to a repository, the token should have `repo` scope. If the runner should be added to an organization, the token should have `admin:org` scope. Note that to use a Personal Access Token, you must issue the token with an account that has `admin` privileges (on the repository and/or the organization).
+
+Open the Create Token page from the following link, grant the `repo` and/or `admin:org` scope, and press the "Generate Token" button at the bottom of the page to create the token.
 
 - [Create personal access token](https://github.com/settings/tokens/new)
 
@@ -75,12 +88,12 @@ $ kubectl create secret generic controller-manager \
 
 ## Usage
 
-There's generally two ways to use this controller:
+There are two ways to use this controller:
 
-- Manage runners one by one with `Runner`
-- Manage a set of runners with `RunnerDeployment`
+- Manage runners one by one with `Runner`.
+- Manage a set of runners with `RunnerDeployment`.
 
-### Runners
+### Repository runners
 
 To launch a single Self-hosted runner, you need to create a manifest file includes *Runner* resource as follows. This example launches a self-hosted runner with name *example-runner* for the *chenrui333/actions-runner-controller* repository.
 
@@ -124,9 +137,25 @@ The runner you created has been registered to your repository.
 
 Now your can use your self-hosted runner. See the [official documentation](https://help.github.com/en/actions/automating-your-workflow-with-github-actions/using-self-hosted-runners-in-a-workflow) on how to run a job with it.
 
+### Organization Runners
+
+To add the runner to an organization, you only need to replace the `repository` field with `organization`, so the runner will register itself to the organization.
+
+```
+# runner.yaml
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: Runner
+metadata:
+  name: example-org-runner
+spec:
+  organization: your-organization-name
+```
+
+Now you can see the runner on the organization level (if you have organization owner permissions).
+
 ### RunnerDeployments
 
-There's also `RunnerReplicaSet` and `RunnerDeployment` that corresponds to `ReplicaSet` and `Deployment` but for `Runner`.
+There are `RunnerReplicaSet` and `RunnerDeployment` that corresponds to `ReplicaSet` and `Deployment` but for `Runner`.
 
 You usually need only `RunnerDeployment` rather than `RunnerReplicaSet` as the former is for managing the latter.
 
@@ -151,12 +180,163 @@ $ kubectl apply -f runner.yaml
 runnerdeployment.actions.summerwind.dev/example-runnerdeploy created
 ```
 
-You can see that 2 runners has been created as specified by `replicas: 2`:
+You can see that 2 runners have been created as specified by `replicas: 2`:
 
 ```
 $ kubectl get runners
-NAME             REPOSITORY                             STATUS
 NAME                             REPOSITORY                             STATUS
 example-runnerdeploy2475h595fr   mumoshu/actions-runner-controller-ci   Running
 example-runnerdeploy2475ht2qbr   mumoshu/actions-runner-controller-ci   Running
+```
+
+#### Autoscaling
+
+`RunnerDeployment` can scale number of runners between `minReplicas` and `maxReplicas` fields, depending on pending workflow runs.
+
+In the below example, `actions-runner` checks for pending workflow runs for each sync period, and scale to e.g. 3 if there're 3 pending jobs at sync time.
+
+```
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: summerwind-actions-runner-controller
+spec:
+  minReplicas: 1
+  maxReplicas: 3
+  template:
+    spec:
+      repository: summerwind/actions-runner-controller
+```
+
+Please also note that the sync period is set to 10 minutes by default and it's configurable via `--sync-period` flag.
+
+Additionally, the autoscaling feature has an anti-flapping option that prevents periodic loop of scaling up and down.
+By default, it doesn't scale down until the grace period of 10 minutes passes after a scale up. The grace period can be configured by setting `scaleDownDelaySecondsAfterScaleUp`:
+
+```
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: summerwind-actions-runner-controller
+spec:
+  minReplicas: 1
+  maxReplicas: 3
+  scaleDownDelaySecondsAfterScaleUp: 1m
+  template:
+    spec:
+      repository: summerwind/actions-runner-controller
+```
+
+## Additional tweaks
+
+You can pass details through the spec selector. Here's an eg. of what you may like to do:
+
+```yaml
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: actions-runner
+  namespace: default
+spec:
+  replicas: 2
+  template:
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/test: ""
+
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/test
+        operator: Exists
+
+      repository: mumoshu/actions-runner-controller-ci
+      ImagePullPolicy: Always
+      image: custom-image/actions-runner:latest
+      resources:
+        limits:
+          cpu: "4.0"
+          memory: "8Gi"
+        requests:
+          cpu: "2.0"
+          memory: "4Gi"
+      sidecarContainers:
+        - name: mysql
+          image: mysql:5.7
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: abcd1234
+          securityContext:
+            runAsUser: 0
+```
+
+## Runner labels
+
+To run a workflow job on a self-hosted runner, you can use the following syntax in your workflow:
+
+```yaml
+jobs:
+  release:
+    runs-on: self-hosted
+```
+
+When you have multiple kinds of self-hosted runners, you can distinguish between them using labels. In order to do so, you can specify one or more labels in your `Runner` or `RunnerDeployment` spec.
+
+```yaml
+# runnerdeployment.yaml
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: custom-runner
+spec:
+  replicas: 1
+  template:
+    spec:
+      repository: summerwind/actions-runner-controller
+      labels:
+        - custom-runner
+```
+
+Once this spec is applied, you can observe the labels for your runner from the repository or organization in the GitHub settings page for the repository or organization. You can now select a specific runner from your workflow by using the label in `runs-on`:
+
+```yaml
+jobs:
+  release:
+    runs-on: custom-runner
+```
+
+Note that if you specify `self-hosted` in your worlflow, then this will run your job on _any_ self-hosted runner, regardless of the labels that they have.
+
+## Softeware installed in the runner image
+
+The GitHub hosted runners include a large amount of pre-installed software packages. For Ubuntu 18.04, this list can be found at https://github.com/actions/virtual-environments/blob/master/images/linux/Ubuntu1804-README.md
+
+The container image is based on Ubuntu 18.04, but it does not contain all of the software installed on the GitHub runners. It contains the following subset of packages from the GitHub runners:
+
+* Basic CLI packages
+* git (2.26)
+* docker
+* build-essentials
+
+The virtual environments from GitHub contain a lot more software packages (different versions of Java, Node.js, Golang, .NET, etc) which are not provided in the runner image. Most of these have dedicated setup actions which allow the tools to be installed on-demand in a workflow, for example: `actions/setup-java` or `actions/setup-node`
+
+If there is a need to include packages in the runner image for which there is no setup action, then this can be achieved by building a custom container image for the runner. The easiest way is to start with the `summerwind/actions-runner` image and installing the extra dependencies directly in the docker image:
+
+```yaml
+FROM summerwind/actions-runner:v2.169.1
+
+RUN sudo apt update -y \
+  && apt install YOUR_PACKAGE
+  && rm -rf /var/lib/apt/lists/*
+```
+
+You can then configure the runner to use a custom docker image by configuring the `image` field of a `Runner` or `RunnerDeployment`:
+
+```yaml
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: Runner
+metadata:
+  name: custom-runner
+spec:
+  repository: summerwind/actions-runner-controller
+  image: YOUR_CUSTOM_DOCKER_IMAGE
 ```
